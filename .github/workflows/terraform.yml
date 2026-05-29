@@ -1,0 +1,100 @@
+# ============================================================
+#  terraform.yml
+#  The CI/CD Pipeline
+#  Runs automatically every time you push code to GitHub
+# ============================================================
+
+name: Terraform CI/CD Pipeline
+
+# WHEN does this pipeline run?
+# - On every push to any branch (CI - runs terraform plan)
+# - On push to main branch only (CD - runs terraform apply)
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+
+# WHAT does the pipeline do?
+jobs:
+
+  # ── JOB 1: TERRAFORM PLAN (CI) ──────────────────────────
+  # Runs on every push and pull request
+  # Checks code and shows what will change — but does NOT deploy
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Download your code onto the GitHub runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install Terraform on the GitHub runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      # Step 3: Give Terraform your AWS credentials
+      # These come from GitHub Secrets — never hardcoded!
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Step 4: Initialize Terraform
+      # Downloads the AWS provider and connects to S3 backend
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 5: Check code formatting
+      # Fails if code is not properly formatted
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      # Step 6: Validate the code
+      # Checks for syntax errors and invalid configurations
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 7: Show what will be created/changed/destroyed
+      # This is the safety check before any deployment
+      - name: Terraform Plan
+        run: terraform plan
+
+  # ── JOB 2: TERRAFORM APPLY (CD) ─────────────────────────
+  # Runs ONLY when code is merged to main branch
+  # Actually deploys the infrastructure to AWS
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
