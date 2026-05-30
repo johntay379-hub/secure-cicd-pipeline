@@ -15,7 +15,7 @@ terraform {
     key            = "secure-cicd/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "john-terraform-lock"
+    use_lockfile   = true
   }
 
   required_providers {
