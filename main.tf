@@ -77,14 +77,15 @@ resource "aws_instance" "web" {
     http_tokens   = "required"
     http_endpoint = "enabled"
   }
-  user_data = <<-EOF
+  user_data = base64encode(<<-EOF
     yum update -y
     yum install -y httpd
-    systemctl start httpd
     systemctl enable httpd
+    systemctl start httpd
     echo '<h1>Deployed by GitHub Actions CI/CD Pipeline</h1>' > /var/www/html/index.html
   EOF
-  tags      = { Name = "${var.project}-web-server", Project = var.project }
+  )
+  tags = { Name = "${var.project}-web-server", Project = var.project }
 }
 
 resource "aws_eip" "web" {
