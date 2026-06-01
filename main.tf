@@ -13,7 +13,7 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags = { Name = "${var.project}-vpc", Project = var.project }
+  tags                 = { Name = "${var.project}-vpc", Project = var.project }
 }
 
 resource "aws_subnet" "public" {
@@ -21,12 +21,12 @@ resource "aws_subnet" "public" {
   cidr_block              = var.subnet_cidr
   availability_zone       = "${var.region}a"
   map_public_ip_on_launch = true
-  tags = { Name = "${var.project}-public-subnet", Project = var.project }
+  tags                    = { Name = "${var.project}-public-subnet", Project = var.project }
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "${var.project}-igw", Project = var.project }
+  tags   = { Name = "${var.project}-igw", Project = var.project }
 }
 
 resource "aws_route_table" "public" {
@@ -84,11 +84,11 @@ resource "aws_instance" "web" {
     systemctl enable httpd
     echo '<h1>Deployed by GitHub Actions CI/CD Pipeline</h1>' > /var/www/html/index.html
   EOF
-  tags = { Name = "${var.project}-web-server", Project = var.project }
+  tags      = { Name = "${var.project}-web-server", Project = var.project }
 }
 
 resource "aws_eip" "web" {
   instance = aws_instance.web.id
   domain   = "vpc"
-  tags = { Name = "${var.project}-eip", Project = var.project }
+  tags     = { Name = "${var.project}-eip", Project = var.project }
 }
