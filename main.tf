@@ -85,7 +85,7 @@ resource "aws_instance" "web" {
     yum install -y httpd
     systemctl enable httpd
     systemctl start httpd
-    echo '<h1>Deployed by GitHub Actions CI/CD Pipeline</h1>' > /var/www/html/index.html
+    curl -o /var/www/html/index.html https://raw.githubusercontent.com/johntay379-hub/secure-cicd-pipeline/main/index.html
   EOF
   )
   tags = { Name = "${var.project}-web-server", Project = var.project }
