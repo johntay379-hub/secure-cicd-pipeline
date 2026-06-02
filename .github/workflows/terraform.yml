@@ -68,6 +68,11 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
+      - name: Security Scan with tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          soft_fail: true
+
   # ── JOB 2: TERRAFORM APPLY (CD) ─────────────────────────
   # Runs ONLY when code is merged to main branch
   # Actually deploys the infrastructure to AWS
