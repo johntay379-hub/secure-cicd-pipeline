@@ -261,6 +261,34 @@ These are the decisions that matter — and why they were made:
 
 ---
 
+
+## 💡 Why this project matters
+
+Most cloud engineers can deploy infrastructure. Fewer can automate it. Even fewer can secure the automation itself.
+
+This project demonstrates all three.
+
+**For recruiters and hiring managers**, this project shows:
+
+| Skill | Evidence |
+|---|---|
+| Infrastructure as Code | Entire AWS stack defined in Terraform — nothing clicked manually |
+| CI/CD automation | GitHub Actions pipeline deploys on every push to main |
+| Security mindset | tfsec scans every deployment — issues found and fixed before production |
+| Secret management | AWS credentials never appear in code — GitHub Secrets only |
+| Remote state management | S3 + DynamoDB backend — professional standard for team environments |
+| Git workflow | Feature branches for development, main branch for production |
+| Cost awareness | Entire platform runs for ~$0.01 per month |
+| Documentation | Architecture diagram, pipeline explanation, findings table |
+
+**For engineers reading this**, the key insight is this:
+
+A pipeline that does not include security scanning is just fast deployment of potentially insecure infrastructure. tfsec turns the pipeline into a security gate — nothing reaches AWS without passing a scan first. The SSH finding that tfsec caught in this project is the exact kind of misconfiguration that leads to real breaches. It was caught automatically, before deployment, at zero cost.
+
+That is DevSecOps in practice — not as a concept, but as a working pipeline.
+
+---
+
 ## 💰 Cost Breakdown
 
 This entire deployment runs for almost nothing:
