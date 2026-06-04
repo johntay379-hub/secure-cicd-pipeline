@@ -37,56 +37,89 @@ It covers six layers of cloud security: identity, storage, logging, networking, 
 
 ## 🏗️ Architecture
 
+
 ```mermaid
 flowchart TD
-    Internet(["🌐 Internet\nHTTP · HTTPS"]) -->|port 80 / 443| IGW
+    DEV["👨‍💻 Developer
+Write Terraform code
+git push"] --> GH
+    GH["🐙 GitHub
+Code repository
+Secrets vault"] --> CI
 
-    IGW["🚪 Internet Gateway\nVPC entry point"] --> RT
-    RT["📋 Route Table\n0.0.0.0/0 → IGW"] --> PUB
-
-    subgraph VPC["🏗️ VPC — 10.0.0.0/16"]
-        subgraph PUB["📡 Public Subnet — 10.0.1.0/24"]
-            EC2["🖥️ EC2 Web Server\nt2.micro · Apache\nElastic IP · IMDSv2"]
-            SG["🛡️ Security Group\n80 · 443 · 22"]
-            EC2 --- SG
-        end
-        subgraph PRI["🔒 Private Subnet — 10.0.2.0/24"]
-            DB["🗄️ Future DB Layer\nNo public access"]
-        end
+    subgraph PIPELINE["⚙️ GitHub Actions Pipeline"]
+        CI["📋 Job 1 — Terraform Plan
+Runs on every push"]
+        CI --> FMT["✅ terraform fmt
+Check formatting"]
+        FMT --> VAL["✅ terraform validate
+Check syntax"]
+        VAL --> PLAN["✅ terraform plan
+Show what will change"]
+        PLAN --> SEC["🔍 tfsec
+Security scan
+Find misconfigurations"]
+        SEC --> GATE{{"Merge to main?"}}
+        GATE -->|Yes| CD
+        GATE -->|No| STOP["🛑 Stop here
+No deployment"]
+        CD["🚀 Job 2 — Terraform Apply
+Main branch only"]
     end
 
-    IAM["🔐 IAM\nLeast Privilege\nInstance Profile\nPassword Policy"] -.->|role assigned| EC2
+    subgraph BACKEND["🗄️ Remote State Backend"]
+        S3S["🪣 S3 Bucket
+john-terraform-state-2026
+Encrypted · Versioned"]
+        DDB["🔒 DynamoDB
+john-terraform-lock
+State locking"]
+        S3S --- DDB
+    end
 
-    EC2 -->|API events| CT
-    CT["🔍 CloudTrail\nMulti-Region\nLog Validation\nTamper-Proof"] -->|log delivery| S3
-    S3["🪣 S3 Audit Vault\nAES-256 Encrypted\nVersioned · Private"]
+    CD --> BACKEND
+    CD --> AWS
 
-    EC2 -->|metrics| CW
-    CW["📊 CloudWatch\nCPU · Status\nIAM Change Alarms"] -->|triggers| SNS
-    SNS["📧 SNS\nReal-Time\nEmail Alerts"]
+    subgraph AWS["☁️ AWS Infrastructure — us-east-1"]
+        VPC["🌐 VPC 10.0.0.0/16"] --> SUB["📡 Public Subnet 10.0.1.0/24"]
+        SUB --> IGW["🚪 Internet Gateway"]
+        IGW --> RT["📋 Route Table
+0.0.0.0/0 → IGW"]
+        RT --> SG["🛡️ Security Group
+Port 80 open · Port 22 my IP only"]
+        SG --> EC2["🖥️ EC2 t2.micro
+Apache · IMDSv2 · Elastic IP"]
+    end
 
-    TF["⚙️ Terraform\nInfrastructure as Code\nSingle Command Deploy"] -.->|provisions| VPC
-    TF -.->|provisions| IAM
-    TF -.->|provisions| S3
-    TF -.->|provisions| CT
-    TF -.->|provisions| CW
+    SECRETS["🔑 GitHub Secrets
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+Never in code"] -.->|injected at runtime| PIPELINE
 
-    style Internet fill:#0d1a30,stroke:#4a9eff,color:#93c5fd
+    style DEV fill:#0d1a30,stroke:#4a9eff,color:#93c5fd
+    style GH fill:#0d1a30,stroke:#6366f1,color:#a5b4fc
+    style PIPELINE fill:#0e1520,stroke:#2088FF,color:#7a9bbf
+    style CI fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style FMT fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style VAL fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style PLAN fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style SEC fill:#1a0810,stroke:#ef4444,color:#fca5a5
+    style GATE fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style STOP fill:#1a0810,stroke:#ef4444,color:#fca5a5
+    style CD fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style BACKEND fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style S3S fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style DDB fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style AWS fill:#0a2020,stroke:#00d4aa,color:#5eead4
+    style VPC fill:#0a2020,stroke:#00d4aa,color:#5eead4
+    style SUB fill:#0a2020,stroke:#00d4aa,color:#5eead4
     style IGW fill:#0a2020,stroke:#00d4aa,color:#5eead4
     style RT fill:#0a2020,stroke:#00d4aa,color:#5eead4
-    style VPC fill:#0e1520,stroke:#1e3a5f,color:#7a9bbf
-    style PUB fill:#0a2020,stroke:#00d4aa,color:#5eead4
-    style PRI fill:#110d1f,stroke:#7c3aed,color:#a78bfa
+    style SG fill:#0d1520,stroke:#6b7280,color:#9ca3af
     style EC2 fill:#0a1f0f,stroke:#00e676,color:#86efac
-    style SG fill:#0d1520,stroke:#374151,color:#6b7280
-    style DB fill:#0d1520,stroke:#374151,color:#4b5563
-    style IAM fill:#0d1a30,stroke:#3b82f6,color:#93c5fd
-    style CT fill:#1a1200,stroke:#f59e0b,color:#fcd34d
-    style S3 fill:#1a1200,stroke:#f59e0b,color:#fcd34d
-    style CW fill:#1a0e08,stroke:#ef4444,color:#fca5a5
-    style SNS fill:#1a0810,stroke:#ec4899,color:#f9a8d4
-    style TF fill:#1a0a2e,stroke:#7B42BC,color:#c4b5fd
+    style SECRETS fill:#110d1f,stroke:#a855f7,color:#d8b4fe
 ```
+
 
 ---
 
