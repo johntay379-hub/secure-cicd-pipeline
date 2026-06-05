@@ -15,62 +15,69 @@ Push code. The pipeline does the rest.
 ## 🏗️ Architecture
 
 ```mermaid
-flowchart LR
-    DEV["👨‍💻 Developer
-git push"] --> GH["🐙 GitHub
-Code + Secrets"]
+flowchart TD
+    A["👨‍💻 Developer
+Writes Terraform Code"] -->|git push| B["🐙 GitHub Repository
+Stores code and secrets"]
 
-    GH --> JOB1
+    B --> C["📋 Job 1 — Terraform Plan
+Runs on every push"]
 
-    subgraph PIPELINE["GitHub Actions Pipeline"]
-        JOB1["Job 1 — Plan
-every push"] --> FMT["fmt"]
-        FMT --> VAL["validate"]
-        VAL --> PLAN["plan"]
-        PLAN --> TFSEC["🔍 tfsec
-security scan"]
-        TFSEC -->|main only| JOB2["Job 2 — Apply
-main branch only"]
+    subgraph CI[" CI — Runs on Every Push "]
+        C --> D["✅ terraform fmt
+Format check"]
+        D --> E["✅ terraform validate
+Syntax check"]
+        E --> F["✅ terraform plan
+Preview changes"]
+        F --> G["🔍 tfsec
+Security scan"]
     end
 
-    subgraph STATE["Remote State"]
-        S3["🪣 S3
-state file"]
-        DDB["🔒 DynamoDB
-state lock"]
+    G -->|merge to main| H["🚀 Job 2 — Terraform Apply
+Deploys to AWS"]
+
+    subgraph CD[" CD — Runs on Main Branch Only "]
+        H
     end
 
-    JOB2 --> STATE
-    JOB2 --> AWS
+    H --> I["🗄️ S3 Remote State
+Stores terraform.tfstate"]
+    H --> J["🔒 DynamoDB Lock
+Prevents concurrent runs"]
 
-    subgraph AWS["AWS — us-east-1"]
-        VPC["VPC"] --> SUBNET["Public Subnet"]
-        SUBNET --> SG["Security Group"]
-        SG --> EC2["🖥️ EC2
-Apache · IMDSv2"]
+    H --> K["☁️ AWS Infrastructure"]
+
+    subgraph AWS[" AWS — us-east-1 "]
+        K --> L["🌐 VPC · Subnet · IGW · Route Table"]
+        L --> M["🛡️ Security Group
+Port 80 open · SSH my IP only"]
+        M --> N["🖥️ EC2 t2.micro
+Apache · IMDSv2 Enforced"]
     end
 
-    SECRETS["🔑 GitHub Secrets
-AWS credentials"] -.->|injected| PIPELINE
+    O["🔑 GitHub Secrets
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY"] -.->|injected securely| CI
 
-    style DEV fill:#0d1a30,stroke:#4a9eff,color:#93c5fd
-    style GH fill:#0d1a30,stroke:#6366f1,color:#a5b4fc
-    style PIPELINE fill:#0e1520,stroke:#2088FF,color:#7a9bbf
-    style JOB1 fill:#0a1f0f,stroke:#22c55e,color:#86efac
-    style FMT fill:#0a1f0f,stroke:#22c55e,color:#86efac
-    style VAL fill:#0a1f0f,stroke:#22c55e,color:#86efac
-    style PLAN fill:#0a1f0f,stroke:#22c55e,color:#86efac
-    style TFSEC fill:#1a0810,stroke:#ef4444,color:#fca5a5
-    style JOB2 fill:#0a1f0f,stroke:#22c55e,color:#86efac
-    style STATE fill:#1a1200,stroke:#f59e0b,color:#fcd34d
-    style S3 fill:#1a1200,stroke:#f59e0b,color:#fcd34d
-    style DDB fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style A fill:#0d1a30,stroke:#4a9eff,color:#93c5fd
+    style B fill:#0d1a30,stroke:#6366f1,color:#a5b4fc
+    style C fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style D fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style E fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style F fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style G fill:#1a0810,stroke:#ef4444,color:#fca5a5
+    style H fill:#0a1f0f,stroke:#22c55e,color:#86efac
+    style I fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style J fill:#1a1200,stroke:#f59e0b,color:#fcd34d
+    style K fill:#0a2020,stroke:#00d4aa,color:#5eead4
+    style L fill:#0a2020,stroke:#00d4aa,color:#5eead4
+    style M fill:#0d1520,stroke:#6b7280,color:#9ca3af
+    style N fill:#0a1f0f,stroke:#00e676,color:#86efac
+    style O fill:#110d1f,stroke:#a855f7,color:#d8b4fe
+    style CI fill:#0e1520,stroke:#22c55e,color:#7a9bbf
+    style CD fill:#0e1520,stroke:#22c55e,color:#7a9bbf
     style AWS fill:#0a2020,stroke:#00d4aa,color:#5eead4
-    style VPC fill:#0a2020,stroke:#00d4aa,color:#5eead4
-    style SUBNET fill:#0a2020,stroke:#00d4aa,color:#5eead4
-    style SG fill:#0d1520,stroke:#6b7280,color:#9ca3af
-    style EC2 fill:#0a1f0f,stroke:#00e676,color:#86efac
-    style SECRETS fill:#110d1f,stroke:#a855f7,color:#d8b4fe
 ```
 
 ---
@@ -254,7 +261,7 @@ secure-cicd-pipeline/
 |---|---|
 | [AWS CLI Security Framework](https://github.com/johntay379-hub/aws-end-to-end-security-framework) | IAM · S3 · CloudTrail · VPC · EC2 · CloudWatch · SNS |
 | [Terraform Security Framework](https://github.com/johntay379-hub/terraform-aws-security-framework) | Same security model as Infrastructure as Code |
-| [Zero Trust Security Platform](https://github.com/johntay379-hub/aws-zero-trust-security-platform) | ALB · Auto Scaling · AWS Config |
+| [Zero Trust Security Platform](https://github.com/johntay379-hub/aws-zero-trust-security-platform) | IAM · S3 · CloudTrail · VPC · ALB · Auto Scaling Group · EC2 · CloudWatch · SNS · AWS Config |
 | **Secure CI/CD Pipeline** | **DevSecOps — automated pipeline with tfsec security scanning** |
 
 ---
